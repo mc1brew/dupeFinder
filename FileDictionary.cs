@@ -23,6 +23,9 @@ namespace dupeFinder {
             if(dictionary.ContainsKey(hash))
             {
                 dictionary[hash].Add(path);
+                Console.WriteLine("Duplicate file found.");
+                var outputText = string.Join("], [", dictionary[hash]);
+                Console.WriteLine($"[{hash}], [{outputText}]");
             }
             else{
                 dictionary.Add(hash,new List<string>() {path});

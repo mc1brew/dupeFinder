@@ -27,6 +27,8 @@ namespace dupeFinder
             //Get contents of directory;
             var files = GetFilteredFiles(path, filters);
 
+            int fileCounter = 0;
+            int fileCount = files.Length;
             foreach(var file in files)
             {
                 var filePath = file;
@@ -44,6 +46,12 @@ namespace dupeFinder
                     {
                         throw ex;
                     }
+                }
+
+                fileCounter++;
+                if(fileCounter%100 == 0)
+                {
+                    Console.WriteLine($"{fileCounter}/{fileCount} files processed.");
                 }
             }
 
