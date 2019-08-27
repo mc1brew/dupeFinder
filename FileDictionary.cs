@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System;
 using System.Text;
 
-namespace fileHash {
+namespace dupeFinder {
     public class FileDictionary
     {
         private Dictionary<string, List<string>> dictionary;
