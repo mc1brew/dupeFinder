@@ -1,42 +1,34 @@
+using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.Text;
 
 namespace dupeFinder {
-    public class FileDictionary
+    public class FileDictionary : System.Collections.Generic.Dictionary<string, List<string>>
     {
-        private Dictionary<string, List<string>> dictionary;
-
-        public FileDictionary()
+        public bool Add(string hash, string path)
         {
-            dictionary = new Dictionary<string, List<string>>();
-        }
-
-        public int Count {
-            get {
-                return dictionary.Count;
-            }
-        }
-
-        public void Add(string hash, string path)
-        {
-            if(dictionary.ContainsKey(hash))
+            bool returnValue = false;
+            if(this.ContainsKey(hash))
             {
-                dictionary[hash].Add(path);
-                Console.WriteLine("Duplicate file found.");
-                var outputText = string.Join("], [", dictionary[hash]);
-                Console.WriteLine($"[{hash}], [{outputText}]");
+                if(!this[hash].Contains(path))
+                {
+                    this[hash].Add(path);
+                    returnValue = true;
+                }
             }
             else{
-                dictionary.Add(hash,new List<string>() {path});
+                this.Add(hash,new List<string>() {path});
             }
+
+            return returnValue;
         }
 
         public string[] ToStringArray()
         { 
             List<string> stringList = new List<string>();
 
-            foreach(var item in dictionary)
+            foreach(var item in this)
             {
                 if(item.Value.Count>1)
                 {
@@ -54,6 +46,5 @@ namespace dupeFinder {
 
             return stringList.ToArray();
         }
-
     }
 }
