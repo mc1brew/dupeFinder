@@ -19,15 +19,15 @@ namespace dupeFinder
             ParameterOptions.Parse(args);
             FileDictionary fileDictionary = new FileDictionary();
             
-            List<string> filesStringArray = new List<string>();
+            List<string> filesStringList = new List<string>();
 
             //Get all files to be processed.
             foreach(var directory in ParameterOptions.Directories){
-                filesStringArray.AddRange(GetFilteredFiles(directory, ParameterOptions.Filters));
+                filesStringList.AddRange(GetFilteredFiles(directory, ParameterOptions.Filters));
             }
 
             //Perform preliminary file scan on the first kilobyte.
-            fileDictionary = PreliminaryFileScan(filesStringArray);
+            fileDictionary = PreliminaryFileScan(filesStringList);
 
             //Process records that represent potential matches
             fileDictionary = Task.Run(() => ScanAllFiles(fileDictionary)).Result;
