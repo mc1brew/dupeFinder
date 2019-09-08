@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 using System.Linq;
 
@@ -18,13 +19,18 @@ namespace dupeFinder
             ParameterOptions.Parse(args);
             FileDictionary fileDictionary = new FileDictionary();
             
-            //Perform preliminary file scan on the first kilobyte.
+            List<string> filesStringArray = new List<string>();
+
+            //Get all files to be processed.
             foreach(var directory in ParameterOptions.Directories){
-                fileDictionary = PreliminaryFileScan(directory, ParameterOptions.Filters);
+                filesStringArray.AddRange(GetFilteredFiles(directory, ParameterOptions.Filters));
             }
 
+            //Perform preliminary file scan on the first kilobyte.
+            fileDictionary = PreliminaryFileScan(filesStringArray);
+
             //Process records that represent potential matches
-            fileDictionary = ScanAllFiles(fileDictionary);
+            fileDictionary = Task.Run(() => ScanAllFiles(fileDictionary)).Result;
 
             //Write the output files to csv
             Console.WriteLine();
@@ -33,15 +39,14 @@ namespace dupeFinder
             File.AppendAllLines(ParameterOptions.Output, fileDictionary.ToStringArray());
         }
 
-        public static FileDictionary PreliminaryFileScan(string path, List<string> filters)
+        public static FileDictionary PreliminaryFileScan(List<string> filePaths)
         {
             //Get contents of directory;
             int fileCounter = 0;
-            string[] filePaths = GetFilteredFiles(path, filters);
-            int fileCount = filePaths.Length;
+            int fileCount = filePaths.Count;
             FileDictionary returnFileDictionary = new FileDictionary();
 
-            Console.WriteLine($"\nBegin Preliminary File Scan: {filePaths.Length} Files");
+            Console.WriteLine($"\nBegin Preliminary File Scan: {filePaths.Count} Files");
             foreach(var filePath in filePaths)
             {
                 char outputChar = outpucChar_noMatch;
@@ -70,7 +75,7 @@ namespace dupeFinder
         /// Process all preliminary scans and do a full byte comparison to see if they are actual matches.
         /// 
         /// fileDictionary: A list of all possible matches.
-        public static FileDictionary ScanAllFiles(FileDictionary fileDictionary)
+        public async static Task<FileDictionary> ScanAllFiles(FileDictionary fileDictionary)
         {
             int fileCount = fileDictionary.Count;
             var filesForFullScan = fileDictionary.Where(x => x.Value.Count > 1);
@@ -94,23 +99,20 @@ namespace dupeFinder
                         //If the files are a byte match then we get the full hash for the dictionary for accurate tracking.
                         //This is going to be a problem for really big files (over a couple of gigs).
                         //I'll have to figure that out later.
-                        if(ByteTool.CompareByteArray(filePathArray[referencePathPosition], filePathArray[comparePathPosition]))
+                        bool fileMatch = await ByteTool.CompareByteArray(filePathArray[referencePathPosition], filePathArray[comparePathPosition]);
+                        if(fileMatch)
                         {
                             using (MD5 crypt = MD5.Create())
                             {
-                                var byteArrayOfFile = File.ReadAllBytes(filePathArray[referencePathPosition]);
-                                var fileHash = crypt.ComputeHash(byteArrayOfFile);
-                                var fileHashString = BitConverter.ToString(fileHash).Replace("-", "").ToLower().ToLowerInvariant();
-
                                 try {
-                                    returnFileDictionary.Add(fileHashString, filePathArray[referencePathPosition]);
+                                    returnFileDictionary.Add(fileDictionaryItem.Key, filePathArray[referencePathPosition]);
                                     //This statement is an if because it's possible the file might have been added once during the comparions.
                                     //Right now the comparison looks like this:
                                     //| F1 | F2 | F3 | F4 |
                                     // If F1 matches F2 and F3 on the first sweep then on the second sweep F2 will match F3.
                                     //This means that it would appear to be another match, but really we already knew this.
                                     //There is probably a more convenient way of dropping those out.  Probably I can just pop it out of the array.
-                                    if(returnFileDictionary.Add(fileHashString, filePathArray[comparePathPosition])) outputChar = outputChar_match;
+                                    if(returnFileDictionary.Add(fileDictionaryItem.Key, filePathArray[comparePathPosition])) outputChar = outputChar_match;
                                 }
                                 catch(Exception ex)
                                 {
@@ -135,16 +137,32 @@ namespace dupeFinder
         ///
         /// path: directory to look for files.
         /// filters: file types to look for.
-        public static string[] GetFilteredFiles(string path, List<string> filters)
+        public static List<string> GetFilteredFiles(string path, List<string> filters)
         {
-            List<string> filesArray = new List<string>();
+            List<string> filesStringList = new List<string>();
+            //TODO: Make this list an external config file rather than hard coded.
+            List<string> excludeDirectories = new List<string>()
+            {
+                "\\.tmp.drivedownload\\"
+                , "\\.git\\"
+                , "\\bin\\"
+                , "\\obj\\"
+                , "\\lib\\"
+                , "\\src\\"
+            };
 
             foreach(string filter in filters)
             {
-                filesArray.AddRange(Directory.GetFiles(path, filter, SearchOption.AllDirectories));
+                filesStringList.AddRange(Directory.GetFiles(path, filter, SearchOption.AllDirectories));
+                
+                foreach(string excludedDirectory in excludeDirectories)
+                {
+                   int removedCount = filesStringList.RemoveAll(x => x.Contains(excludedDirectory));
+                   if(filesStringList.Count == 0) break;
+                }
             }
 
-            return filesArray.ToArray();
+            return filesStringList;
         }
     }
 }
