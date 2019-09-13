@@ -149,6 +149,7 @@ namespace dupeFinder
                 , "\\obj\\"
                 , "\\lib\\"
                 , "\\src\\"
+                , "\\*.7z.tmp"
             };
 
             foreach(string filter in filters)
