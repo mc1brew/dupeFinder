@@ -37,6 +37,8 @@ namespace dupeFinder
             Console.WriteLine($"\n{fileDictionary.Count} Matches Found\n");
             File.Delete(ParameterOptions.Output);
             File.AppendAllLines(ParameterOptions.Output, fileDictionary.ToStringArray());
+
+            SelectAndDeleteDuplicates(fileDictionary);
         }
 
         public static FileDictionary PreliminaryFileScan(List<string> filePaths)
@@ -164,6 +166,53 @@ namespace dupeFinder
             }
 
             return filesStringList;
+        }
+
+        public static void SelectAndDeleteDuplicates(FileDictionary fileDictionary)
+        {
+            foreach (var file in fileDictionary)
+            {
+                Console.WriteLine($"Duplicate found: Which would you like to keep?");
+
+                int i = 0, maxSelection = 0, selection = -1;
+
+                Dictionary<int, string> filePathDictionary = new Dictionary<int, string>();
+                foreach (var filePath in file.Value)
+                {
+                    filePathDictionary.Add(i, filePath);
+                    Console.WriteLine($"{i}) - {filePath}");
+                    i++;
+                }
+                maxSelection = i - 1;
+                Console.WriteLine();
+
+                while (selection < 0 || selection > maxSelection)
+                {
+                    var userInput = Console.ReadLine();
+
+                    if(!int.TryParse(userInput, out selection))
+                    {
+                        selection = -1;
+                        Console.WriteLine($"Selection '{userInput}' is not valid.  Please select a value between 0 and {maxSelection}");
+                    }
+                    else if (selection < 0 || selection > maxSelection)
+                    {
+                        selection = -1;
+                        Console.WriteLine($"Selection '{userInput}' was out of bounds.  Please select a value between 0 and {maxSelection}");
+                    }
+                }
+
+                Console.WriteLine($"{filePathDictionary[selection]} is selected.  All others will be deleted.");
+
+                file.Value.Remove(filePathDictionary[selection]);
+
+                foreach (var filePath in file.Value)
+                {
+                    Console.WriteLine($"Deleting file located at {filePath}");
+                }
+
+                Console.WriteLine("\n");
+            }
         }
     }
 }
