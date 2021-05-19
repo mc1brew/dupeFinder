@@ -172,19 +172,21 @@ namespace dupeFinder
         {
             foreach (var file in fileDictionary)
             {
-                Console.WriteLine($"Duplicate found: Which would you like to keep?");
+                Console.WriteLine($"Duplicate found: Select which file to keep.");
 
-                int i = 0, maxSelection = 0, selection = -1;
+                int i = 1, maxSelection = 0, selection = -1;
 
                 Dictionary<int, string> filePathDictionary = new Dictionary<int, string>();
+
                 foreach (var filePath in file.Value)
                 {
                     filePathDictionary.Add(i, filePath);
                     Console.WriteLine($"{i}) - {filePath}");
                     i++;
                 }
+                Console.WriteLine($"\nOr press 0 to skip.\n");
+
                 maxSelection = i - 1;
-                Console.WriteLine();
 
                 while (selection < 0 || selection > maxSelection)
                 {
@@ -202,16 +204,22 @@ namespace dupeFinder
                     }
                 }
 
-                Console.WriteLine($"{filePathDictionary[selection]} is selected.  All others will be deleted.");
-
-                file.Value.Remove(filePathDictionary[selection]);
-
-                foreach (var filePath in file.Value)
+                if(selection == 0)
                 {
-                    Console.WriteLine($"Deleting file located at {filePath}");
+                    Console.WriteLine("Skipping selection.\n");
+                    continue;
                 }
+                else {
+                    Console.WriteLine($"{filePathDictionary[selection]} is selected.  All others will be deleted.");
 
-                Console.WriteLine("\n");
+                    file.Value.Remove(filePathDictionary[selection]);
+
+                    foreach (var filePath in file.Value)
+                    {
+                        Console.WriteLine($"Deleting file located at: {filePath}\n");
+                        File.Delete(filePath);
+                    }
+                }
             }
         }
     }
