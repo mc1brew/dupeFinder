@@ -11,12 +11,16 @@ namespace DupeFinder
 {
     class Program
     {
+        static int filesProcessed = 0;
         static void Main(string[] args)
         {    
             ParameterOptions.Parse(args);
             
             DupeFinder dupeFinder = new DupeFinder();
             dupeFinder.DuplicateFound += OutputDuplicateFound;
+            dupeFinder.DuplicateNotFound += OutputDuplicateNotFound;
+            dupeFinder.FileProcessed += OnFileProcessed;
+            dupeFinder.ScanBegins += OnpreliminaryScan;
             FileDictionary fileDictionary = dupeFinder.FindMatches(ParameterOptions.Directories, ParameterOptions.Filters);
 
             //Write the output files to csv
@@ -36,6 +40,22 @@ namespace DupeFinder
         public static void OutputDuplicateNotFound(object sender, EventArgs e)
         {
             Console.Write(".");
+        }
+
+        public static void OnFileProcessed(object sender, EventArgs e)
+        {
+            filesProcessed++;
+            if(filesProcessed%100 == 0)
+            {
+                Console.WriteLine();
+                filesProcessed = 0;
+            }
+        }
+        
+        public static void OnpreliminaryScan(object sender, OnScanBeginEventArgs e)
+        {
+            if(e.PreliminaryScan) Console.WriteLine($"\nBegin Preliminary File Scan: {e.FilesToBeScanned} Files");
+            else Console.WriteLine($"\nBegin Full File Scan: {e.FilesToBeScanned} Files");
         }
         public static void SelectAndDeleteDuplicates(FileDictionary fileDictionary)
         {
