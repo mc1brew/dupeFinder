@@ -172,7 +172,7 @@ namespace dupeFinder
         {
             foreach (var file in fileDictionary)
             {
-                Console.WriteLine($"Duplicate found: Select which file to keep.");
+                Console.WriteLine($"Duplicate found. Select which file to keep:");
 
                 int i = 1, maxSelection = 0, selection = -1;
 
@@ -181,7 +181,7 @@ namespace dupeFinder
                 foreach (var filePath in file.Value)
                 {
                     filePathDictionary.Add(i, filePath);
-                    Console.WriteLine($"{i}) - {filePath}");
+                    Console.WriteLine($"{i}) {filePath}");
                     i++;
                 }
                 Console.WriteLine($"\nOr press 0 to skip.\n");
