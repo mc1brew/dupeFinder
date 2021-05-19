@@ -3,7 +3,7 @@ using NDesk.Options;
 using System.IO;
 using System.Collections.Generic;
 
-namespace dupeFinder
+namespace DupeFinder
 {
     public static class ParameterOptions
     {

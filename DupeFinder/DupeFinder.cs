@@ -1,47 +1,69 @@
-﻿using System;
-using System.IO;
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
+using System.IO;
 using System.Threading.Tasks;
-
 using System.Linq;
+using System.Security.Cryptography;
 
-namespace dupeFinder
-{
-    class Program
-    {
+namespace DupeFinder{
+    public class DupeFinder{
         static char outputChar_match = 'x';
         static char outpucChar_noMatch = '.';
 
-        static void Main(string[] args)
-        {    
-            ParameterOptions.Parse(args);
+        public FileDictionary FindMatches(List<string> searchPaths, List<string> filters)
+        {
             FileDictionary fileDictionary = new FileDictionary();
-            
             List<string> filesStringList = new List<string>();
 
             //Get all files to be processed.
-            foreach(var directory in ParameterOptions.Directories){
-                filesStringList.AddRange(GetFilteredFiles(directory, ParameterOptions.Filters));
+            foreach(var directory in searchPaths){
+                filesStringList.AddRange(GetFilteredFiles(directory, filters));
             }
 
             //Perform preliminary file scan on the first kilobyte.
             fileDictionary = PreliminaryFileScan(filesStringList);
 
             //Process records that represent potential matches
+            //TODO: Revisit this, why are you using async?
             fileDictionary = Task.Run(() => ScanAllFiles(fileDictionary)).Result;
 
-            //Write the output files to csv
-            Console.WriteLine();
-            Console.WriteLine($"\n{fileDictionary.Count} Matches Found\n");
-            File.Delete(ParameterOptions.Output);
-            File.AppendAllLines(ParameterOptions.Output, fileDictionary.ToStringArray());
-
-            SelectAndDeleteDuplicates(fileDictionary);
+            return fileDictionary;
         }
 
-        public static FileDictionary PreliminaryFileScan(List<string> filePaths)
+        ///Get the paths of the files to be scanned based on the path and designated filters.
+        ///
+        /// path: directory to look for files.
+        /// filters: file types to look for.
+        private static List<string> GetFilteredFiles(string path, List<string> filters)
+        {
+            List<string> filesStringList = new List<string>();
+            //TODO: Make this list an external config file rather than hard coded.
+            List<string> excludeDirectories = new List<string>()
+            {
+                "\\.tmp.drivedownload\\"
+                , "\\.git\\"
+                , "\\bin\\"
+                , "\\obj\\"
+                , "\\lib\\"
+                , "\\src\\"
+                , "\\*.7z.tmp"
+            };
+
+            foreach(string filter in filters)
+            {
+                filesStringList.AddRange(Directory.GetFiles(path, filter, SearchOption.AllDirectories));
+                
+                foreach(string excludedDirectory in excludeDirectories)
+                {
+                   int removedCount = filesStringList.RemoveAll(x => x.Contains(excludedDirectory));
+                   if(filesStringList.Count == 0) break;
+                }
+            }
+
+            return filesStringList;
+        }
+    
+        public FileDictionary PreliminaryFileScan(List<string> filePaths)
         {
             //Get contents of directory;
             int fileCounter = 0;
@@ -55,7 +77,9 @@ namespace dupeFinder
                 var firstKilobyteHash = ByteTool.GetKilobyteMd5Hash(filePath);
                 
                 try {
-                    if(returnFileDictionary.Add(firstKilobyteHash, filePath)) outputChar = outputChar_match;
+                    if(returnFileDictionary.Add(firstKilobyteHash, filePath))
+                        this.OnDuplicateFound();
+                    else this.OnDuplicateNotFound();
                 }
                 catch(Exception ex)
                 {
@@ -135,92 +159,24 @@ namespace dupeFinder
             return returnFileDictionary;
         }
 
-        ///Get the paths of the files to be scanned based on the path and designated filters.
-        ///
-        /// path: directory to look for files.
-        /// filters: file types to look for.
-        public static List<string> GetFilteredFiles(string path, List<string> filters)
+        private void OnDuplicateFound()
         {
-            List<string> filesStringList = new List<string>();
-            //TODO: Make this list an external config file rather than hard coded.
-            List<string> excludeDirectories = new List<string>()
+            EventHandler handler = DuplicateFound;
+            if(handler != null)
             {
-                "\\.tmp.drivedownload\\"
-                , "\\.git\\"
-                , "\\bin\\"
-                , "\\obj\\"
-                , "\\lib\\"
-                , "\\src\\"
-                , "\\*.7z.tmp"
-            };
-
-            foreach(string filter in filters)
-            {
-                filesStringList.AddRange(Directory.GetFiles(path, filter, SearchOption.AllDirectories));
-                
-                foreach(string excludedDirectory in excludeDirectories)
-                {
-                   int removedCount = filesStringList.RemoveAll(x => x.Contains(excludedDirectory));
-                   if(filesStringList.Count == 0) break;
-                }
-            }
-
-            return filesStringList;
-        }
-
-        public static void SelectAndDeleteDuplicates(FileDictionary fileDictionary)
-        {
-            foreach (var file in fileDictionary)
-            {
-                Console.WriteLine($"Duplicate found. Select which file to keep:");
-
-                int i = 1, maxSelection = 0, selection = -1;
-
-                Dictionary<int, string> filePathDictionary = new Dictionary<int, string>();
-
-                foreach (var filePath in file.Value)
-                {
-                    filePathDictionary.Add(i, filePath);
-                    Console.WriteLine($"{i}) {filePath}");
-                    i++;
-                }
-                Console.WriteLine($"\nOr press 0 to skip.\n");
-
-                maxSelection = i - 1;
-
-                while (selection < 0 || selection > maxSelection)
-                {
-                    var userInput = Console.ReadLine();
-
-                    if(!int.TryParse(userInput, out selection))
-                    {
-                        selection = -1;
-                        Console.WriteLine($"Selection '{userInput}' is not valid.  Please select a value between 0 and {maxSelection}");
-                    }
-                    else if (selection < 0 || selection > maxSelection)
-                    {
-                        selection = -1;
-                        Console.WriteLine($"Selection '{userInput}' was out of bounds.  Please select a value between 0 and {maxSelection}");
-                    }
-                }
-
-                if(selection == 0)
-                {
-                    Console.WriteLine("Skipping selection.\n");
-                    continue;
-                }
-                else {
-                    Console.WriteLine($"{filePathDictionary[selection]} is selected.  All others will be deleted.");
-
-                    file.Value.Remove(filePathDictionary[selection]);
-
-                    foreach (var filePath in file.Value)
-                    {
-                        Console.WriteLine($"Deleting file located at: {filePath}\n");
-                        File.Delete(filePath);
-                    }
-                }
+                handler(this, new EventArgs());
             }
         }
+
+        private void OnDuplicateNotFound()
+        {
+            EventHandler handler = DuplicateNotFound;
+            if(handler != null)
+            {
+                handler(this, new EventArgs());
+            }
+        }
+        public event EventHandler DuplicateFound;
+        public event EventHandler DuplicateNotFound;
     }
 }

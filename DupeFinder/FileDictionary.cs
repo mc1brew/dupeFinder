@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System;
 using System.Text;
 
-namespace dupeFinder {
+namespace DupeFinder {
     public class FileDictionary : System.Collections.Generic.Dictionary<string, List<string>>
     {
+        ///Returns true if it matches an existing hash.
+        ///Returns false if it does not match an existing hash.
         public bool Add(string hash, string path)
         {
             bool returnValue = false;
