@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
-namespace dupeFinder{
+namespace DupeFinder{
     public class ByteTool {
 
         public static string GetKilobyteMd5Hash(string path)
