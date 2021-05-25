@@ -20,16 +20,16 @@ namespace DupeFinder
             dupeFinder.DuplicateFound += OutputDuplicateFound;
             dupeFinder.DuplicateNotFound += OutputDuplicateNotFound;
             dupeFinder.FileProcessed += OnFileProcessed;
-            dupeFinder.ScanBegins += OnpreliminaryScan;
-            FileDictionary fileDictionary = dupeFinder.FindMatches(ParameterOptions.Directories, ParameterOptions.Filters);
+            dupeFinder.ScanBegins += OnPreliminaryScan;
 
+            FileDictionary fileDictionary = dupeFinder.FindMatches(ParameterOptions.Directories, ParameterOptions.Filters);
+            SelectAndDeleteDuplicates(fileDictionary);
+            
             //Write the output files to csv
             Console.WriteLine();
             Console.WriteLine($"\n{fileDictionary.Count} Matches Found\n");
             File.Delete(ParameterOptions.Output);
             File.AppendAllLines(ParameterOptions.Output, fileDictionary.ToStringArray());
-
-            SelectAndDeleteDuplicates(fileDictionary);
         }
 
         public static void OutputDuplicateFound(object sender, EventArgs e)
@@ -52,7 +52,7 @@ namespace DupeFinder
             }
         }
         
-        public static void OnpreliminaryScan(object sender, OnScanBeginEventArgs e)
+        public static void OnPreliminaryScan(object sender, OnScanBeginEventArgs e)
         {
             if(e.PreliminaryScan) Console.WriteLine($"\nBegin Preliminary File Scan: {e.FilesToBeScanned} Files");
             else Console.WriteLine($"\nBegin Full File Scan: {e.FilesToBeScanned} Files");
